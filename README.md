@@ -20,7 +20,7 @@ Static Visualization
 
 The static visualization, optimized for distribution on social media, was created using ggplot in R Markdown: color indicates the proportion of the population with access to electricity, while the transparency of the markers associated with each country indicate what percentage of the total national fine energy consumption was renewable. For simplicity, triangles are used to indicate developing countries (arbitrarily defined as countries with HDI < 0.5 since HDI values range from 0 to 1) and circles are used to indicate developed countries (defined as countries with HDI > 0.5). 
 
-![staticvis](https://github.com/cchinchristopherj/Right-Whale-Convolutional-Recurrent-Neural-Network/blob/master/Static/sdg_staticvis.png)
+![staticvis](https://github.com/cchinchristopherj/Global-Energy-Access/blob/master/Static-Visualization/sdg_staticvis.png)
 
 Interactive Visualization
 =========================
