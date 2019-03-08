@@ -27,6 +27,8 @@ Interactive Visualization
 
 For the interactive visualization, leaflet and Shiny were used to take advantage of the possibility of user input. Leaflet added greater interactivity with the map, while Shiny allowed the user to select a country from a drop-down menu to display a line chart with trends in the three variables of interest (Percent Electricity Access, Percent Renewable Energy, and HDI) from 1990 to 2014. (Again, due to there not being data for all countries in this range, there are occasions where data points and/or variables are missing from the chart, also filled in as NA on the geographical map).
 
+The interactive visualization is hosted on shinyapps.io and can be found [here](https://cchinchristopherj.shinyapps.io/sdg_interactivevis/).
+
 Modules and Installation Instructions
 =========================
 
