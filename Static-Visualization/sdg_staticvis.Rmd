@@ -1,0 +1,185 @@
+---
+title: "Static Visualization"
+output: flexdashboard::flex_dashboard
+---
+
+```{r}
+# Load libraries
+library(rgeos)
+library(rworldxtra)
+library(rworldmap)
+library(ggplot2)
+library(tidyverse)
+library(sf)
+library(rvest)
+library(stringr)
+library(scales)
+library(viridis)
+
+# World map data
+map.world = map_data('world')
+# Read in CSV file with data for electricity access
+electricity = read.csv('electricity.csv')
+# Extract data for the year 2014
+electricity = electricity[which(electricity$Year=='2014'),]
+# Convert factors to character vectors
+electricity$Entity = as.character(electricity$Entity)
+electricity$Code = as.character(electricity$Code)
+# Ensure country names in electricity.csv match the country
+# names in map.world
+electricity = electricity %>%  mutate(Entity = recode(Entity,   
+                           `United States`
+                            = 'USA',
+                           `United Kingdom` 
+                            = 'UK',
+                            `United States Virgin Islands` 
+                            = 'Virigin Islands',
+                            `Democratic Republic of Congo` 
+                            = 'Democratic Republic of the Congo',
+                            `Trinidad and Tobago`
+                            = 'Trinidad',
+                            `Antigua and Barbuda`
+                            = 'Antigua'
+                        )
+                   )
+# Read in CSV file with data for renewable energy consumption
+renewables = read.csv('renewables.csv')
+renewables = renewables[which(renewables$Year=='2014'),]
+renewables$Entity = as.character(renewables$Entity)
+renewables$Code = as.character(renewables$Code)
+# Normalize values for consumption to 1 for mapping to alpha 
+# values in ggplot
+renewables$Consumption = renewables$Consumption/100
+renewables = renewables %>%  mutate(Entity = recode(Entity,  
+                           `United States`
+                            = 'USA',
+                           `United Kingdom` 
+                            = 'UK',
+                            `United States Virgin Islands` 
+                            = 'Virigin Islands',
+                            `Democratic Republic of Congo` 
+                            = 'Democratic Republic of the Congo',
+                            `Trinidad and Tobago`
+                            = 'Trinidad',
+                            `Antigua and Barbuda`
+                            = 'Antigua'
+                        )
+                   )
+# Read in CSV file with data for human development index
+hdi = read.csv('hdi.csv')
+hdi = hdi[which(hdi$Year=='2014'),]
+hdi$Entity = as.character(hdi$Entity)
+hdi$Code = as.character(hdi$Code)
+hdi = hdi %>%  mutate(Entity = recode(Entity, 
+                           `United States`
+                            = 'USA',
+                           `United Kingdom` 
+                            = 'UK',
+                            `United States Virgin Islands` 
+                            = 'Virigin Islands',
+                            `Democratic Republic of Congo` 
+                            = 'Democratic Republic of the Congo',
+                            `Trinidad and Tobago`
+                            = 'Trinidad',
+                            `Antigua and Barbuda`
+                            = 'Antigua'
+                        )
+                   )
+# Convert HDI into a factor with value of 1 for values less 
+# than 0.5 and a value of 0 for values greater than 0.5
+# for mapping to shape values in ggplot
+hdi$HDI = factor(as.numeric(hdi$HDI_Full < 0.5))
+# Left-join the data in map.world and electricity
+map.all = left_join(map.world, electricity, by = c('region' = 'Entity')) 
+# Incorporate the data from renewables
+map.all = left_join(map.all, renewables, by = c('region' = 'Entity','Code','Year')) 
+# Incorporate the data from hdi
+map.all = left_join(map.all, hdi, by = c('region' = 'Entity','Code','Year')) 
+# Obtain data for longitutde and latitude coordinates of the
+# centroids of every country
+wmap = getMap(resolution='high')
+centroids = gCentroid(wmap,byid=TRUE)
+# Convert to data frame
+centroids_df = as.data.frame(centroids)
+# Country names become a separate column
+centroids_df <- cbind(rownames(centroids_df), centroids_df)
+rownames(centroids_df) <- NULL
+colnames(centroids_df) <- c("country","long","lat")
+# Ensure centroids_df has the same country names as map.all
+centroids_df = centroids_df %>%  mutate(country = recode(country,                                     `United States of America`
+                                    = 'USA',
+                                    `United Kingdom` 
+                                    = 'UK',
+                                   `United States Virgin Islands`
+                                    = 'Virigin Islands',
+                                   `Trinidad and Tobago` 
+                                    = 'Trinidad',
+                                   `Antigua and Barbuda` 
+                                    = 'Antigua'
+                                )
+                          )
+centroids_df$country = as.character(centroids_df$country)
+# Extract a subset from map.all with specific columns
+map.all_sub = map.all %>% 
+    select('region','Access','Consumption','HDI_Full','HDI')
+# Left-join centroids_df and map.all_sub
+map.all_final = left_join(centroids_df,map.all_sub,by = 
+                            c('country' = 'region')) 
+# Remove duplicates
+map.all_final = map.all_final[!duplicated(map.all_final),]
+# Sort by the Access variable to facilitate plotting
+map.all_final = map.all_final %>%
+    arrange(Access)
+# Remove values with NAs
+map.all_final = na.omit(map.all_final)
+```
+    
+
+
+```{r}
+# Plot geographical visualization using ggplot
+ggplot() +
+  geom_polygon(data=map.all,aes(x=long,y=lat,fill = 
+                                  Access,group=group)) +
+  scale_fill_gradientn(colours = 
+      c('#461863','#404E88','#2A8A8C','#7FD157','#F9E53F'),
+                       values =
+      scales::rescale(c(20,40,60,80,100)),
+                       labels = comma,
+                       breaks = c(20,40,60,80,100)) +
+  guides(fill = guide_legend(reverse = T)) +
+  labs(fill = '% Electricity\nAccess',
+       shape = "Human Development\nIndex",
+       alpha = "% Renewable\nEnergy",
+       title = 'Sustainable Development Goal: Energy',
+       subtitle = 'Year: 2014',
+       x = NULL,
+       y = NULL) +
+  theme(text = element_text(family = 'Gill Sans', color = 
+                              '#EEEEEE'),
+        plot.title = element_text(size = 26),
+        plot.subtitle = element_text(size = 14),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid = element_blank(),
+        panel.background = element_rect(fill = '#333333'),
+        plot.background = element_rect(fill = '#333333'),
+        legend.position = "right",
+        legend.background = element_blank(),
+        legend.key = element_blank(),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 8),
+        legend.spacing.y = unit(0.03, 'cm'),
+        legend.spacing.x = unit(0.03, 'cm'),
+        legend.box.spacing = unit(0.001, 'mm')
+        )  +
+  # Plot points with alpha value determined by renewable energy
+  # consumption and shape determined by hdi
+  geom_point(data=map.all_final,aes(x=long,y=lat,
+      alpha=Consumption,shape=HDI),color='red') +
+  scale_alpha_continuous(limits=c(0.0,1.0),breaks=c(0.0,0.5,1.0),
+                         labels=c("0","50","100"))  +
+  scale_shape_discrete(labels=c("Developed","Developing")) +
+  guides(alpha = guide_legend(order=1,reverse=T),
+         shape = guide_legend(order=2))
+```
